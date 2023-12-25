@@ -25,6 +25,7 @@ open class CenteredCollectionViewFlowLayout: UICollectionViewFlowLayout {
     private var lastCollectionViewSize: CGSize = CGSize.zero
     private var lastScrollDirection: UICollectionView.ScrollDirection!
     private var lastItemSize: CGSize = CGSize.zero
+    
     var pageWidth: CGFloat {
         switch scrollDirection {
         case .horizontal:
@@ -36,12 +37,18 @@ open class CenteredCollectionViewFlowLayout: UICollectionViewFlowLayout {
         }
     }
     
+    private var _currentCenteredPage: Int?
     /// Calculates the current centered page.
     public var currentCenteredPage: Int? {
         guard let collectionView = collectionView else { return nil }
-        let currentCenteredPoint = CGPoint(x: collectionView.contentOffset.x + collectionView.bounds.width/2, y: collectionView.contentOffset.y + collectionView.bounds.height/2)
         
-        return collectionView.indexPathForItem(at: currentCenteredPoint)?.row
+        if let _currentCenteredPage {
+            return _currentCenteredPage
+        } else {
+            let currentCenteredPoint = CGPoint(x: collectionView.contentOffset.x + collectionView.bounds.width/2, y: collectionView.contentOffset.y + collectionView.bounds.height/2)
+            
+            return collectionView.indexPathForItem(at: currentCenteredPoint)?.row
+        }
     }
     
     public override init() {
@@ -79,6 +86,7 @@ open class CenteredCollectionViewFlowLayout: UICollectionViewFlowLayout {
             lastCollectionViewSize = currentCollectionViewSize
             lastScrollDirection = scrollDirection
             lastItemSize = itemSize
+            _currentCenteredPage = nil
         }
     }
     
@@ -105,6 +113,7 @@ open class CenteredCollectionViewFlowLayout: UICollectionViewFlowLayout {
                 let pageWidth = itemSize.width + minimumLineSpacing
                 newOffset += velocity.x > 0 ? pageWidth : -pageWidth
             }
+            _currentCenteredPage = Int(newOffset / pageWidth)
             return CGPoint(x: newOffset, y: proposedContentOffset.y)
             
         case .vertical:
@@ -115,9 +124,11 @@ open class CenteredCollectionViewFlowLayout: UICollectionViewFlowLayout {
                 let pageHeight = itemSize.height + minimumLineSpacing
                 newOffset += velocity.y > 0 ? pageHeight : -pageHeight
             }
+            _currentCenteredPage = Int(newOffset / pageWidth)
             return CGPoint(x: proposedContentOffset.x, y: newOffset)
             
         default:
+            _currentCenteredPage = nil
             return .zero
         }
     }
@@ -137,13 +148,16 @@ open class CenteredCollectionViewFlowLayout: UICollectionViewFlowLayout {
             let pageOffset = CGFloat(index) * pageWidth - collectionView.contentInset.left
             proposedContentOffset = CGPoint(x: pageOffset, y: collectionView.contentOffset.y)
             shouldAnimate = abs(collectionView.contentOffset.x - pageOffset) > 1 ? animated : false
+            _currentCenteredPage = Int(pageOffset / pageWidth)
         case .vertical:
             let pageOffset = CGFloat(index) * pageWidth - collectionView.contentInset.top
             proposedContentOffset = CGPoint(x: collectionView.contentOffset.x, y: pageOffset)
             shouldAnimate = abs(collectionView.contentOffset.y - pageOffset) > 1 ? animated : false
+            _currentCenteredPage = Int(pageOffset / pageWidth)
         default:
             proposedContentOffset = .zero
             shouldAnimate = false
+            _currentCenteredPage = nil
         }
         collectionView.setContentOffset(proposedContentOffset, animated: shouldAnimate)
     }
