@@ -113,7 +113,7 @@ open class CenteredCollectionViewFlowLayout: UICollectionViewFlowLayout {
                 let pageWidth = itemSize.width + minimumLineSpacing
                 newOffset += velocity.x > 0 ? pageWidth : -pageWidth
             }
-            _currentCenteredPage = Int(newOffset / pageWidth)
+            updateCurrentCenteredPage(newOffset)
             return CGPoint(x: newOffset, y: proposedContentOffset.y)
             
         case .vertical:
@@ -124,11 +124,11 @@ open class CenteredCollectionViewFlowLayout: UICollectionViewFlowLayout {
                 let pageHeight = itemSize.height + minimumLineSpacing
                 newOffset += velocity.y > 0 ? pageHeight : -pageHeight
             }
-            _currentCenteredPage = Int(newOffset / pageWidth)
+            updateCurrentCenteredPage(newOffset)
             return CGPoint(x: proposedContentOffset.x, y: newOffset)
             
         default:
-            _currentCenteredPage = nil
+            updateCurrentCenteredPage(0)
             return .zero
         }
     }
@@ -148,18 +148,30 @@ open class CenteredCollectionViewFlowLayout: UICollectionViewFlowLayout {
             let pageOffset = CGFloat(index) * pageWidth - collectionView.contentInset.left
             proposedContentOffset = CGPoint(x: pageOffset, y: collectionView.contentOffset.y)
             shouldAnimate = abs(collectionView.contentOffset.x - pageOffset) > 1 ? animated : false
-            _currentCenteredPage = Int(pageOffset / pageWidth)
+            updateCurrentCenteredPage(pageOffset)
         case .vertical:
             let pageOffset = CGFloat(index) * pageWidth - collectionView.contentInset.top
             proposedContentOffset = CGPoint(x: collectionView.contentOffset.x, y: pageOffset)
             shouldAnimate = abs(collectionView.contentOffset.y - pageOffset) > 1 ? animated : false
-            _currentCenteredPage = Int(pageOffset / pageWidth)
+            updateCurrentCenteredPage(pageOffset)
         default:
             proposedContentOffset = .zero
             shouldAnimate = false
-            _currentCenteredPage = nil
+            updateCurrentCenteredPage(0)
         }
         collectionView.setContentOffset(proposedContentOffset, animated: shouldAnimate)
+    }
+    
+    private func updateCurrentCenteredPage(_ offset: CGFloat?) {
+        if let offset {
+            if pageWidth == 0 {
+                _currentCenteredPage = nil
+            } else {
+                _currentCenteredPage = Int(offset / pageWidth)
+            }
+        } else {
+            _currentCenteredPage = nil
+        }
     }
 }
 
