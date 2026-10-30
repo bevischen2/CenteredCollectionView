@@ -45,9 +45,15 @@ open class CenteredCollectionViewFlowLayout: UICollectionViewFlowLayout {
         if let _currentCenteredPage {
             return _currentCenteredPage
         } else {
-            let currentCenteredPoint = CGPoint(x: collectionView.contentOffset.x + collectionView.bounds.width/2, y: collectionView.contentOffset.y + collectionView.bounds.height/2)
-            
-            return collectionView.indexPathForItem(at: currentCenteredPoint)?.row
+            // Derive the page from the content offset instead of hit-testing the center point,
+            // which returns nil when the point lands in the spacing between two items.
+            let offset: CGFloat
+            switch scrollDirection {
+            case .horizontal: offset = collectionView.contentOffset.x
+            case .vertical: offset = collectionView.contentOffset.y
+            default: return nil
+            }
+            return page(forContentOffset: offset)
         }
     }
     
@@ -164,14 +170,28 @@ open class CenteredCollectionViewFlowLayout: UICollectionViewFlowLayout {
     
     private func updateCurrentCenteredPage(_ offset: CGFloat?) {
         if let offset {
-            if pageWidth == 0 {
-                _currentCenteredPage = nil
-            } else {
-                _currentCenteredPage = Int(offset / pageWidth)
-            }
+            _currentCenteredPage = page(forContentOffset: offset)
         } else {
             _currentCenteredPage = nil
         }
+    }
+    
+    /// The page for a content offset. The content inset centering the first and last item is added back,
+    /// and the result is rounded, not truncated, so fractional sizes cannot drop a page.
+    private func page(forContentOffset offset: CGFloat) -> Int? {
+        guard let collectionView = collectionView, pageWidth > 0 else { return nil }
+        
+        let inset: CGFloat
+        switch scrollDirection {
+        case .horizontal: inset = collectionView.contentInset.left
+        case .vertical: inset = collectionView.contentInset.top
+        default: inset = 0
+        }
+        
+        let page = Int(((offset + inset) / pageWidth).rounded())
+        let itemCount = collectionView.numberOfSections > 0 ? collectionView.numberOfItems(inSection: 0) : 0
+        guard itemCount > 0 else { return nil }
+        return min(max(page, 0), itemCount - 1)
     }
 }
 
